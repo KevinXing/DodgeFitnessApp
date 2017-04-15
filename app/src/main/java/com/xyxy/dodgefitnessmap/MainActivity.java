@@ -14,6 +14,11 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.estimote.coresdk.common.requirements.SystemRequirementsChecker;
+
+import java.util.Arrays;
+
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     // debug
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -27,15 +32,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float[] mValues = new float[3];
     private float[] mMatrix = new float[9];
 
-
+    // beacon
+    private ProximityContentManager proximityContentManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-       FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+            fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
@@ -45,13 +51,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // init sensor
         initSensorService();
 
-
+        // beacon
+        proximityContentManager = new ProximityContentManager(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         registerSensorService();
+        // beacon
+        if (!SystemRequirementsChecker.checkWithDefaultDialogs(this)) {
+            Log.e(TAG, "Can't scan for beacons, some pre-conditions were not met");
+            Log.e(TAG, "Read more about what's required at: http://estimote.github.io/Android-SDK/JavaDocs/com/estimote/sdk/SystemRequirementsChecker.html");
+            Log.e(TAG, "If this is fixable, you should see a popup on the app's screen right now, asking to enable what's necessary");
+        } else {
+            Log.d(TAG, "Starting ProximityContentManager content updates");
+            proximityContentManager.startContentUpdates();
+        }
     }
 
     @Override
@@ -60,6 +76,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (mSensorManager != null) {
             mSensorManager.unregisterListener(this);
         }
+        // beacon
+        Log.d(TAG, "Stopping ProximityContentManager content updates");
+        proximityContentManager.stopContentUpdates();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        proximityContentManager.destroy();
     }
 
     @Override
